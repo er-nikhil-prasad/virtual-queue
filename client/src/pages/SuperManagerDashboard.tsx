@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BackButton } from '../components/ui/BackButton';
 import { setupBusiness } from '../services/queueService';
 
 export const SuperManagerDashboard = () => {
@@ -55,6 +56,7 @@ export const SuperManagerDashboard = () => {
 
     return (
         <div className="container" style={{ marginTop: '2rem', maxWidth: '600px' }}>
+            <BackButton />
             <h1 style={{ marginBottom: '0.5rem' }}>Setup your Virtual Queue</h1>
             <p className="text-muted" style={{ marginBottom: '2rem' }}>Get your business queue up and running in seconds.</p>
 

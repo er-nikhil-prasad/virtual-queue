@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { BackButton } from '../../components/ui/BackButton';
 import { verifyManager } from '../../services/queueService';
 import { db } from '../../mockDb';
 
@@ -25,6 +26,7 @@ export const ManagerLogin = () => {
 
     return (
         <div className="container" style={{ marginTop: '4rem', maxWidth: '400px' }}>
+            <BackButton />
             <div style={{ padding: '2rem', backgroundColor: 'var(--color-surface)', borderRadius: 'var(--radius-lg)' }}>
                 <h2 style={{ textAlign: 'center', marginBottom: '2rem' }}>Manager Login</h2>
 

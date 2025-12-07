@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { LandingPage } from './pages/LandingPage';
 import { ManagerDashboard } from './pages/ManagerDashboard';
 import { SuperManagerDashboard } from './pages/SuperManagerDashboard';
@@ -16,7 +17,9 @@ function App() {
         <Route path="/manager" element={<Navigate to="/manager/login" replace />} />
         <Route path="/manager/login" element={<ManagerLogin />} />
         <Route path="/manager/signup" element={<ManagerSignup />} />
-        <Route path="/manager/dashboard" element={<ManagerDashboard />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/manager/dashboard" element={<ManagerDashboard />} />
+        </Route>
 
         {/* Other Routes */}
         <Route path="/super-admin" element={<SuperManagerDashboard />} />

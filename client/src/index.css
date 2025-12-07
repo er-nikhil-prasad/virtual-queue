@@ -63,7 +63,13 @@ button {
 
 .btn-primary {
   background-color: var(--color-primary);
-  color: white;
+  color: white !important;
+  /* Force high contrast */
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-hover);
+  color: white !important;
 }
 
 .btn-primary:hover {
