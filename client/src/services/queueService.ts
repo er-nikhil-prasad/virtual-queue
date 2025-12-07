@@ -105,3 +105,28 @@ export const setupBusiness = (
         isOwner: managerDetails.mode === 'self'
     };
 };
+
+export const getOwnerDashboardData = () => {
+    // 1. Find Super Manager by ownerPhone (In mock, we assume the logged in SM matches or we search)
+    // For MVP/Mock, we'll just get all queues since we usually only have one active SM in the session.
+    // Ideally: const sm = db.getSuperManagers().find(sm => sm.phone === ownerPhone);
+    const queues = db.getQueues();
+    const users = db.getUsers();
+    const managers = JSON.parse(localStorage.getItem('vq_managers') || '[]');
+
+    return queues.map((q: Queue) => {
+        const activeCount = users.filter((u: any) => u.queueId === q.id && u.status === 'waiting').length;
+        const servedCount = users.filter((u: any) => u.queueId === q.id && u.status === 'served').length;
+
+        const manager = managers.find((m: any) => m.phone === q.assignedManagerPhone);
+        const assistantName = manager ? manager.name : 'Unknown';
+
+        return {
+            queueId: q.id,
+            queueName: q.name,
+            assistantName,
+            activeCount,
+            servedCount
+        };
+    });
+};
