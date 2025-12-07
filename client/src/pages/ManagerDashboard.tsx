@@ -114,7 +114,7 @@ export const ManagerDashboard = () => {
                 </div>
                 <div>
                     Queue: <strong>{queueData.queue.name}</strong>
-                    <button className="btn" style={{ marginLeft: '1rem', fontSize: '0.8rem', border: '1px solid gray' }} onClick={() => { db.setManager(null); window.location.href = '/manager/login'; }}>Logout</button>
+                    <button className="btn" style={{ marginLeft: '1rem', fontSize: '0.8rem', border: '1px solid var(--color-text-muted)', color: 'var(--color-text)' }} onClick={() => { db.setManager(null); window.location.href = '/manager/login'; }}>Logout</button>
                 </div>
             </header>
 
@@ -133,7 +133,7 @@ export const ManagerDashboard = () => {
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h3>Queue ({queueData?.users.length || 0})</h3>
-                        <button className="btn" style={{ fontSize: '0.8rem' }} onClick={() => loadQueueDetails(queueData.queue.id)}>Refresh</button>
+                        <button className="btn" style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', border: '1px solid var(--color-surface)' }} onClick={() => loadQueueDetails(queueData.queue.id)}>Refresh</button>
                     </div>
 
                     <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>

@@ -152,7 +152,7 @@ export const SuperManagerDashboard = () => {
                             </div>
                             <div className="form-group">
                                 <label>Create PIN</label>
-                                <input required type="password" maxLength={4} value={asstPin} onChange={e => setAsstPin(e.target.value)} placeholder="4-digit PIN" style={{ width: '100%', padding: '0.5rem' }} />
+                                <input required type="password" maxLength={4} inputMode="numeric" value={asstPin} onChange={e => setAsstPin(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="4-digit PIN" style={{ width: '100%', padding: '0.5rem' }} />
                             </div>
                         </div>
                     )}

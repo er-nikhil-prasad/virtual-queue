@@ -55,8 +55,10 @@ export const ManagerLogin = () => {
                             type="password"
                             placeholder="Enter 4-digit PIN"
                             value={pin}
-                            onChange={e => setPin(e.target.value)}
+                            onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                             required
+                            maxLength={4}
+                            inputMode="numeric"
                             style={{ padding: '0.75rem', marginTop: '0.25rem', width: '100%' }}
                         />
                     </label>

@@ -105,8 +105,10 @@ export const ManagerSignup = () => {
                             type="password"
                             placeholder="Set 4-digit PIN"
                             value={pin}
-                            onChange={e => setPin(e.target.value)}
+                            onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                             required
+                            maxLength={4}
+                            inputMode="numeric"
                             style={{ padding: '0.75rem', marginTop: '0.25rem', width: '100%' }}
                         />
                     </label>
@@ -117,8 +119,10 @@ export const ManagerSignup = () => {
                             type="password"
                             placeholder="Re-enter PIN"
                             value={confirmPin}
-                            onChange={e => setConfirmPin(e.target.value)}
+                            onChange={e => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                             required
+                            maxLength={4}
+                            inputMode="numeric"
                             style={{ padding: '0.75rem', marginTop: '0.25rem', width: '100%' }}
                         />
                     </label>
