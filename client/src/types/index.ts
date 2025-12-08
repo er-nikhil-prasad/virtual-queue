@@ -2,6 +2,7 @@ export interface SuperManager {
     id: string;
     name: string;
     phone: string;
+    pin: string;
 }
 
 export interface Manager {
