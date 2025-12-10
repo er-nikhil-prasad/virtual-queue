@@ -5,7 +5,7 @@ export const SuperProtectedRoute = () => {
     const sm = getSuperManager();
 
     if (!sm) {
-        return <Navigate to="/super-admin/login" replace />;
+        return <Navigate to="/login" replace />;
     }
 
     return <Outlet />;

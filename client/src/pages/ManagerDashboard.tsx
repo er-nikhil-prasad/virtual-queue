@@ -1,36 +1,33 @@
 import { useState, useEffect } from 'react';
 import { db } from '../mockDb';
 import { getManagerQueue } from '../services/queueService';
+import { useTheme } from '../contexts/ThemeContext';
 
 export const ManagerDashboard = () => {
+    const { theme, toggleTheme } = useTheme();
     const [manager, setManager] = useState<any>(null);
-    const [queueData, setQueueData] = useState<any>(null); // { queue, users: [] }
+    const [queueData, setQueueData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-
     const [newUser, setNewUser] = useState({ name: '', phone: '' });
 
-    // 1. Load Manager and Auto-Fetch Queue
     useEffect(() => {
-        const m = db.getManager(); // In mockDb, this returns last logged in manager
+        const m = db.getManager();
         if (m) {
             setManager(m);
             const assignedQueue = getManagerQueue(m.phone);
-
             if (assignedQueue) {
                 loadQueueDetails(assignedQueue.id);
             } else {
                 setLoading(false);
             }
         } else {
-            // Should redirect to login, handled by App protection generally, but here for safety
-            window.location.href = '/manager/login';
+            window.location.href = '/login';
         }
     }, []);
 
     const loadQueueDetails = (qId: string) => {
         const allQueues = db.getQueues();
         const queue = allQueues.find((q: any) => q.id === qId);
-
         if (queue) {
             const allUsers = db.getUsers();
             const qUsers = allUsers
@@ -62,17 +59,14 @@ export const ManagerDashboard = () => {
         };
 
         db.addUser(user);
-
-        console.log(`[MOCK SMS]To: ${user.phone} -> Join Link: http://localhost:5173/q/${targetQueueId}?u=${user.id}`);
-        alert(`User Added! \n\nMock SMS Link:\nhttp://localhost:5173/q/${targetQueueId}?u=${user.id}`);
-
+        alert(`User Added!\n\nQueue Link:\n${window.location.origin}/q/${targetQueueId}?u=${user.id}`);
         setNewUser({ name: '', phone: '' });
         loadQueueDetails(targetQueueId);
     };
 
     const updateStatus = (userId: string, status: string) => {
         if (!queueData) return;
-        const targetQueueId = queueData.queue.id; // access current queue ID
+        const targetQueueId = queueData.queue.id;
 
         if (status === 'pushed_down') {
             const allUsers = db.getUsers();
@@ -85,80 +79,210 @@ export const ManagerDashboard = () => {
         loadQueueDetails(targetQueueId);
     };
 
-    if (!manager) return <div>Loading...</div>;
+    const handleLogout = () => {
+        db.setManager(null);
+        window.location.href = '/login';
+    };
 
-    if (loading) return <div className="container" style={{ marginTop: '4rem', textAlign: 'center' }}>Loading Queue Data...</div>;
+    if (!manager) return null;
+
+    if (loading) {
+        return (
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
+                    Loading...
+                </div>
+            </div>
+        );
+    }
 
     if (!queueData) {
         return (
-            <div className="container" style={{ marginTop: '2rem', textAlign: 'center' }}>
-                <h1>Hello, {manager.name}</h1>
-                <div style={{ marginTop: '2rem', padding: '2rem', border: '1px solid var(--color-warning)', borderRadius: 'var(--radius-lg)', color: 'var(--color-warning)' }}>
-                    <h3>No Active Queue Assigned</h3>
-                    <p>This phone number ({manager.phone}) is not linked to any active queue.</p>
-                    <p>Please contact the Business Owner / Super Manager.</p>
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+                <div style={{ textAlign: 'center', maxWidth: '400px' }}>
+                    <div style={{ fontSize: '4rem', marginBottom: '1rem', opacity: 0.5 }}>🚫</div>
+                    <h2 style={{ marginBottom: '0.5rem' }}>No Queue Assigned</h2>
+                    <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem' }}>
+                        Your account ({manager.phone}) is not linked to any active queue. Please contact your admin.
+                    </p>
+                    <button className="btn btn-ghost" onClick={handleLogout}>
+                        Logout
+                    </button>
                 </div>
-                <button className="btn" style={{ marginTop: '1rem', border: '1px solid white' }} onClick={() => { db.setManager(null); window.location.reload(); }}>
-                    Logout
-                </button>
             </div>
         );
     }
 
     return (
-        <div className="container" style={{ marginTop: '2rem' }}>
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <div>
-                    <h1>{manager.name}</h1>
-                    <div className="text-muted" style={{ fontSize: '0.9rem' }}>{manager.phone}</div>
-                </div>
-                <div>
-                    Queue: <strong>{queueData.queue.name}</strong>
-                    <button className="btn" style={{ marginLeft: '1rem', fontSize: '0.8rem', border: '1px solid var(--color-text-muted)', color: 'var(--color-text)' }} onClick={() => { db.setManager(null); window.location.href = '/manager/login'; }}>Logout</button>
-                </div>
-            </header>
+        <div style={{ minHeight: '100vh', padding: '2rem' }}>
+            <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem' }}>
-                {/* Add User */}
-                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-surface)', borderRadius: 'var(--radius-md)', height: 'fit-content' }}>
-                    <h3>Add User to Queue</h3>
-                    <form onSubmit={handleAddUser} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
-                        <input placeholder="Name" value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} required style={{ padding: '0.5rem' }} />
-                        <input placeholder="Phone" value={newUser.phone} onChange={e => setNewUser({ ...newUser, phone: e.target.value })} required style={{ padding: '0.5rem' }} />
-                        <button type="submit" className="btn btn-primary">Add to Queue</button>
-                    </form>
-                </div>
-
-                {/* Queue List */}
-                <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h3>Queue ({queueData?.users.length || 0})</h3>
-                        <button className="btn" style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', border: '1px solid var(--color-surface)' }} onClick={() => loadQueueDetails(queueData.queue.id)}>Refresh</button>
+                {/* Header */}
+                <header style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '2rem',
+                    flexWrap: 'wrap',
+                    gap: '1rem'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{
+                            width: '56px',
+                            height: '56px',
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            borderRadius: '1rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '1.5rem',
+                            color: 'white'
+                        }}>
+                            📋
+                        </div>
+                        <div>
+                            <h1 style={{ fontSize: '1.5rem', marginBottom: '0.125rem' }}>{queueData.queue.name}</h1>
+                            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                                Managed by <strong style={{ color: 'var(--color-text)' }}>{manager.name}</strong>
+                            </div>
+                        </div>
                     </div>
 
-                    <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        {queueData?.users.map((user: any) => (
-                            <div key={user.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', border: '1px solid var(--color-surface)', borderRadius: 'var(--radius-md)' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                                        {user.position}
-                                    </div>
-                                    <div>
-                                        <div style={{ fontWeight: '600' }}>{user.name}</div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{user.phone}</div>
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <button className="btn" style={{ backgroundColor: 'var(--color-warning)', color: 'white', padding: '0.5rem 1rem', fontSize: '0.8rem' }} onClick={() => updateStatus(user.id, 'pushed_down')}>
-                                        Push Down
-                                    </button>
-                                    <button className="btn" style={{ backgroundColor: 'var(--color-success)', color: 'white', padding: '0.5rem 1rem', fontSize: '0.8rem' }} onClick={() => updateStatus(user.id, 'served')}>
-                                        Served
-                                    </button>
-                                </div>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                        <span className="badge badge-success">
+                            <span className="status-dot active" />
+                            Live
+                        </span>
+                        <button
+                            className="theme-toggle"
+                            onClick={toggleTheme}
+                            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+                        >
+                            {theme === 'light' ? '🌙' : '☀️'}
+                        </button>
+                        <button className="btn btn-ghost" onClick={handleLogout}>
+                            Logout
+                        </button>
+                    </div>
+                </header>
+
+                {/* Main Content */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.5rem' }}>
+
+                    {/* Add User Card */}
+                    <div className="section" style={{ height: 'fit-content' }}>
+                        <div className="section-title">Add to Queue</div>
+
+                        <form onSubmit={handleAddUser} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label>Customer Name</label>
+                                <input
+                                    placeholder="Enter name"
+                                    value={newUser.name}
+                                    onChange={e => setNewUser({ ...newUser, name: e.target.value })}
+                                    required
+                                />
                             </div>
-                        ))}
-                        {queueData?.users.length === 0 && <p className="text-muted">Queue is empty.</p>}
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label>Phone Number</label>
+                                <input
+                                    type="tel"
+                                    placeholder="For notifications"
+                                    value={newUser.phone}
+                                    onChange={e => setNewUser({ ...newUser, phone: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
+                                + Add Customer
+                            </button>
+                        </form>
+                    </div>
+
+                    {/* Queue List */}
+                    <div className="section">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <div className="section-title" style={{ margin: 0 }}>
+                                Queue ({queueData.users.length})
+                            </div>
+                            <button
+                                className="btn btn-ghost"
+                                style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
+                                onClick={() => loadQueueDetails(queueData.queue.id)}
+                            >
+                                ↻ Refresh
+                            </button>
+                        </div>
+
+                        {queueData.users.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-muted)' }}>
+                                <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}>🎉</div>
+                                <p>Queue is empty! Add customers to get started.</p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                {queueData.users.map((user: any, index: number) => (
+                                    <div
+                                        key={user.id}
+                                        className="card"
+                                        style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            padding: '1rem 1.25rem',
+                                            background: index === 0
+                                                ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 182, 212, 0.1) 100%)'
+                                                : 'var(--color-surface)'
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                            <div style={{
+                                                width: '40px',
+                                                height: '40px',
+                                                borderRadius: 'var(--radius-full)',
+                                                background: index === 0
+                                                    ? 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)'
+                                                    : 'var(--color-primary-gradient)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontWeight: '700',
+                                                fontSize: '1.1rem'
+                                            }}>
+                                                {user.position}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontWeight: '600', marginBottom: '0.125rem' }}>{user.name}</div>
+                                                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{user.phone}</div>
+                                            </div>
+                                            {index === 0 && (
+                                                <span className="badge badge-success" style={{ marginLeft: '0.5rem' }}>
+                                                    Now Serving
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <button
+                                                className="btn btn-warning"
+                                                style={{ padding: '0.5rem 0.875rem', fontSize: '0.8rem' }}
+                                                onClick={() => updateStatus(user.id, 'pushed_down')}
+                                            >
+                                                ↓ Push
+                                            </button>
+                                            <button
+                                                className="btn btn-success"
+                                                style={{ padding: '0.5rem 0.875rem', fontSize: '0.8rem' }}
+                                                onClick={() => updateStatus(user.id, 'served')}
+                                            >
+                                                ✓ Served
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

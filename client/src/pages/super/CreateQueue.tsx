@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { BackButton } from '../../components/ui/BackButton';
+import { useNavigate, Link } from 'react-router-dom';
 import { setupBusiness } from '../../services/queueService';
 
 export const CreateQueue = () => {
@@ -8,136 +7,150 @@ export const CreateQueue = () => {
 
     const [qName, setQName] = useState('');
     const [avgTime, setAvgTime] = useState(10);
-
-    const [manageMode, setManageMode] = useState<'self' | 'assistant'>('self');
     const [asstName, setAsstName] = useState('');
     const [asstPhone, setAsstPhone] = useState('');
     const [asstPin, setAsstPin] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setLoading(true);
 
         try {
-            const result = setupBusiness(
+            setupBusiness(
                 { name: qName, avgTime },
                 {
-                    mode: manageMode,
+                    mode: 'assistant',
                     name: asstName,
                     phone: asstPhone,
                     pin: asstPin
                 }
             );
 
-            if (result.isOwner) {
-                // Determine if we need to set PIN (Signup) or just Login
-                // For simplicity, we send to Signup which handles "Activate/Update"
-                // But wait - if SM is self-managing, they might want to use their SM credentials?
-                // For now, let's keep the Manager Signup flow for the Owner so they have a dedicated Manager Record.
-                // We'll pass the SM's details via state? No, setupBusiness handled the linking.
-                // We just need to redirect them.
-
-                // Alert the user
-                if (confirm('Queue Created! You are set as the manager. Do you want to set your Manager PIN now?')) {
-                    navigate('/manager/signup', {
-                        state: {
-                            phone: result.queue.assignedManagerPhone, // Should match SM phone
-                            isOwner: true
-                        }
-                    });
-                } else {
-                    navigate('/super-admin/dashboard');
-                }
-
-            } else {
-                alert(`Queue "${qName}" Created!\n\nAssistant ${asstName} can login.\nPhone: ${asstPhone}\nPIN: ${asstPin}`);
-                navigate('/super-admin/dashboard');
-            }
+            alert(`Queue "${qName}" Created!\n\nManager: ${asstName}\nPhone: ${asstPhone}\nPIN: ${asstPin}`);
+            navigate('/admin/dashboard');
 
         } catch (err: any) {
             alert(err.message);
+            setLoading(false);
         }
     };
 
     return (
-        <div className="container" style={{ marginTop: '2rem', maxWidth: '600px' }}>
-            <BackButton />
-            <h1 style={{ marginBottom: '0.5rem' }}>Create New Queue</h1>
+        <div style={{ minHeight: '100vh', padding: '2rem' }}>
+            <div style={{ maxWidth: '600px', margin: '0 auto' }}>
 
-            <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '2rem', marginTop: '2rem' }}>
+                {/* Back Button */}
+                <Link
+                    to="/admin/dashboard"
+                    style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        color: 'var(--color-text-muted)',
+                        marginBottom: '1.5rem',
+                        fontSize: '0.9rem'
+                    }}
+                >
+                    ← Back to Dashboard
+                </Link>
 
-                {/* 1. Queue Details */}
-                <section style={{ padding: '1.5rem', backgroundColor: 'var(--color-surface)', borderRadius: 'var(--radius-md)' }}>
-                    <h3 style={{ marginBottom: '1rem', color: 'var(--color-primary)' }}>1. Queue Configuration</h3>
-                    <div style={{ display: 'grid', gap: '1rem' }}>
-                        <div className="form-group">
-                            <label>Queue Name</label>
-                            <input
-                                required
-                                value={qName}
-                                onChange={e => setQName(e.target.value)}
-                                placeholder="e.g. Clinic Room 1"
-                                style={{ width: '100%', padding: '0.75rem' }}
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>Average Service Time (mins)</label>
-                            <input
-                                type="number"
-                                required
-                                value={avgTime}
-                                onChange={e => setAvgTime(Number(e.target.value))}
-                                style={{ width: '100%', padding: '0.75rem' }}
-                            />
+                {/* Header */}
+                <div style={{ marginBottom: '2rem' }}>
+                    <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Create New Queue</h1>
+                    <p style={{ color: 'var(--color-text-muted)' }}>
+                        Set up a queue and assign a manager to handle it.
+                    </p>
+                </div>
+
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+                    {/* Queue Configuration */}
+                    <div className="section">
+                        <div className="section-title">Queue Details</div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label>Queue Name</label>
+                                <input
+                                    required
+                                    value={qName}
+                                    onChange={e => setQName(e.target.value)}
+                                    placeholder="e.g., Clinic Room 1, Counter A"
+                                />
+                            </div>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label>Average Service Time (minutes)</label>
+                                <input
+                                    type="number"
+                                    required
+                                    min="1"
+                                    max="180"
+                                    value={avgTime}
+                                    onChange={e => setAvgTime(Number(e.target.value))}
+                                />
+                                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-subtle)', marginTop: '0.25rem', display: 'block' }}>
+                                    Used to estimate wait times for customers
+                                </span>
+                            </div>
                         </div>
                     </div>
-                </section>
 
-                {/* 2. Management Mode */}
-                <section style={{ padding: '1.5rem', backgroundColor: 'var(--color-surface)', borderRadius: 'var(--radius-md)' }}>
-                    <h3 style={{ marginBottom: '1rem', color: 'var(--color-primary)' }}>2. Who will manage this queue?</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                            <input
-                                type="radio"
-                                name="mode"
-                                checked={manageMode === 'self'}
-                                onChange={() => setManageMode('self')}
-                            />
-                            I will manage it (Owner)
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                            <input
-                                type="radio"
-                                name="mode"
-                                checked={manageMode === 'assistant'}
-                                onChange={() => setManageMode('assistant')}
-                            />
-                            Assign an Assistant
-                        </label>
-                    </div>
+                    {/* Manager Assignment */}
+                    <div className="section">
+                        <div className="section-title">Assign Manager</div>
+                        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                            This person will manage the queue day-to-day.
+                        </p>
 
-                    {manageMode === 'assistant' && (
-                        <div style={{ display: 'grid', gap: '1rem', padding: '1rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-sm)' }}>
-                            <div className="form-group">
-                                <label>Assistant Name</label>
-                                <input required value={asstName} onChange={e => setAsstName(e.target.value)} style={{ width: '100%', padding: '0.5rem' }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label>Manager Name</label>
+                                <input
+                                    required
+                                    value={asstName}
+                                    onChange={e => setAsstName(e.target.value)}
+                                    placeholder="Staff member's name"
+                                />
                             </div>
-                            <div className="form-group">
-                                <label>Assistant Phone</label>
-                                <input required value={asstPhone} onChange={e => setAsstPhone(e.target.value)} style={{ width: '100%', padding: '0.5rem' }} />
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label>Manager Phone</label>
+                                <input
+                                    required
+                                    type="tel"
+                                    value={asstPhone}
+                                    onChange={e => setAsstPhone(e.target.value)}
+                                    placeholder="Mobile number for login"
+                                />
                             </div>
-                            <div className="form-group">
+                            <div className="form-group" style={{ marginBottom: 0 }}>
                                 <label>Create PIN</label>
-                                <input required type="password" maxLength={4} inputMode="numeric" value={asstPin} onChange={e => setAsstPin(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="4-digit PIN" style={{ width: '100%', padding: '0.5rem' }} />
+                                <input
+                                    required
+                                    type="password"
+                                    maxLength={6}
+                                    inputMode="numeric"
+                                    value={asstPin}
+                                    onChange={e => setAsstPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                    placeholder="4-6 digit PIN"
+                                />
+                                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-subtle)', marginTop: '0.25rem', display: 'block' }}>
+                                    They will use this to log into the Manager Dashboard
+                                </span>
                             </div>
                         </div>
-                    )}
-                </section>
+                    </div>
 
-                <button type="submit" className="btn btn-primary" style={{ padding: '1rem', fontSize: '1.1rem' }}>
-                    Create Queue & Start
-                </button>
-            </form>
+                    <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={loading}
+                        style={{ padding: '1rem', fontSize: '1rem' }}
+                    >
+                        {loading ? 'Creating...' : 'Create Queue →'}
+                    </button>
+                </form>
+            </div>
         </div>
     );
 };

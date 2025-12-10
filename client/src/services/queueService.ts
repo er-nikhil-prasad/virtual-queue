@@ -12,6 +12,24 @@ export const verifyManager = (phone: string, pin: string): Manager | null => {
     return manager || null;
 };
 
+// [NEW] Unified Login
+// Priority: Check Manager first (for Individuals who are both Manager + SuperManager)
+// Then SuperManager only (for Team owners who don't manage queues directly)
+export const unifiedLogin = (phone: string, pin: string): { type: 'super' | 'manager'; user: any } | null => {
+    // 1. Check Manager first (Individual users have both Manager + SuperManager records)
+    const m = verifyManager(phone, pin);
+    if (m) {
+        localStorage.setItem('vq_manager', JSON.stringify(m));
+        return { type: 'manager', user: m };
+    }
+
+    // 2. Check Super Manager (Team Owner only - no Manager record)
+    const sm = loginSuperManager(phone, pin);
+    if (sm) return { type: 'super', user: sm };
+
+    return null;
+};
+
 export const getManagerQueue = (phone: string): Queue | null => {
     const allQueues: Queue[] = db.getQueues();
     return allQueues.find((q: Queue) => q.assignedManagerPhone === phone) || null;
@@ -137,6 +155,58 @@ export const setupBusiness = (
         queue: newQueue,
         isOwner: managerDetails.mode === 'self'
     };
+};
+
+// [NEW] Setup Individual (Owner + Queue + Self-Manager)
+export const setupIndividual = (
+    name: string,
+    phone: string,
+    pin: string,
+    queueName: string,
+    avgTime: number
+) => {
+    // 1. Create Super Manager (The Individual is the Owner)
+    // Note: Re-using signupSuperManager logic but we might need to handle if they already exist silently or error.
+    // For now, let's assume fresh signup.
+    let sm;
+    try {
+        sm = signupSuperManager(name, phone, pin);
+    } catch (e) {
+        // If already exists, try to login? Or just fail.
+        // For simplicity in this mock, we assume fresh or fail.
+        throw e;
+    }
+
+    // 2. Create the Queue
+    const newQueue: Queue = {
+        id: 'q-' + Math.random().toString(36).substr(2, 9),
+        superManagerId: sm.id,
+        name: queueName,
+        avgServiceTime: avgTime,
+        dailyLimit: 100,
+        assignedManagerPhone: sm.phone // They manage themselves
+    };
+    db.addQueue(newQueue);
+
+    // 3. Create Manager Record (Self)
+    // This ensures they can login as a manager too (unified login checks both, but for dashboard access)
+    // Actually, if we use Unified Login, we need to decide:
+    // If they login as "Individual", do they see the Manager Dashboard or Admin Dashboard?
+    // Requirement says: "Redirect: Directly to /manager/dashboard."
+    // So they should be logged in as a Manager.
+    signupManager(name, phone, pin); // This creates the manager record.
+
+    return { success: true, user: sm };
+};
+
+// [NEW] Setup Team (Business Account Only)
+export const setupTeam = (
+    businessName: string, // Not used in User model, maybe just Owner Name? Assuming Owner Name for now.
+    ownerName: string,
+    phone: string,
+    pin: string
+) => {
+    return signupSuperManager(ownerName, phone, pin);
 };
 
 export const getOwnerDashboardData = () => {

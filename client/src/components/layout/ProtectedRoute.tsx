@@ -6,7 +6,7 @@ export const ProtectedRoute = () => {
     const manager = db.getManager();
 
     if (!manager) {
-        return <Navigate to="/manager/login" replace />;
+        return <Navigate to="/login" replace />;
     }
 
     return <Outlet />;
