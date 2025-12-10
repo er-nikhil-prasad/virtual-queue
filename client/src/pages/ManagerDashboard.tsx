@@ -7,6 +7,8 @@ export const ManagerDashboard = () => {
     const { theme, toggleTheme } = useTheme();
     const [manager, setManager] = useState<any>(null);
     const [queueData, setQueueData] = useState<any>(null);
+    const [servedUsers, setServedUsers] = useState<any[]>([]);
+    const [showServed, setShowServed] = useState(false);
     const [loading, setLoading] = useState(true);
     const [newUser, setNewUser] = useState({ name: '', phone: '' });
 
@@ -33,7 +35,11 @@ export const ManagerDashboard = () => {
             const qUsers = allUsers
                 .filter((u: any) => u.queueId === qId && u.status === 'waiting')
                 .sort((a: any, b: any) => a.position - b.position);
+            const sUsers = allUsers
+                .filter((u: any) => u.queueId === qId && u.status === 'served')
+                .sort((a: any, b: any) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime());
             setQueueData({ queue, users: qUsers });
+            setServedUsers(sUsers);
         }
         setLoading(false);
     };
@@ -76,6 +82,19 @@ export const ManagerDashboard = () => {
         } else {
             db.updateUser(userId, { status });
         }
+        loadQueueDetails(targetQueueId);
+    };
+
+    const unserveUser = (userId: string) => {
+        if (!queueData) return;
+        const targetQueueId = queueData.queue.id;
+
+        // Get last position and add user back to queue
+        const allUsers = db.getUsers();
+        const qUsers = allUsers.filter((u: any) => u.queueId === targetQueueId && u.status === 'waiting');
+        const lastPos = qUsers.length > 0 ? Math.max(...qUsers.map((u: any) => u.position)) : 0;
+
+        db.updateUser(userId, { status: 'waiting', position: lastPos + 1 });
         loadQueueDetails(targetQueueId);
     };
 
@@ -215,6 +234,93 @@ export const ManagerDashboard = () => {
                             </button>
                         </div>
 
+                        {/* Served Stack - Collapsible */}
+                        {servedUsers.length > 0 && (
+                            <div style={{ marginBottom: '1rem' }}>
+                                <button
+                                    onClick={() => setShowServed(!showServed)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.75rem 1rem',
+                                        background: 'var(--color-success-bg)',
+                                        border: '1px solid rgba(5, 150, 105, 0.3)',
+                                        borderRadius: 'var(--radius-md)',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        cursor: 'pointer',
+                                        color: 'var(--color-success)',
+                                        fontWeight: '600',
+                                        fontSize: '0.9rem'
+                                    }}
+                                >
+                                    <span>✓ Served ({servedUsers.length})</span>
+                                    <span style={{
+                                        transform: showServed ? 'rotate(180deg)' : 'rotate(0deg)',
+                                        transition: 'transform 0.2s ease'
+                                    }}>
+                                        ▼
+                                    </span>
+                                </button>
+
+                                {/* Expanded Served List */}
+                                {showServed && (
+                                    <div style={{
+                                        marginTop: '0.5rem',
+                                        padding: '0.75rem',
+                                        background: 'rgba(5, 150, 105, 0.05)',
+                                        borderRadius: 'var(--radius-md)',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '0.5rem'
+                                    }}>
+                                        {servedUsers.map((user: any) => (
+                                            <div
+                                                key={user.id}
+                                                style={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    padding: '0.75rem 1rem',
+                                                    background: 'var(--color-surface)',
+                                                    borderRadius: 'var(--radius-sm)',
+                                                    opacity: 0.7
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                    <div style={{
+                                                        width: '32px',
+                                                        height: '32px',
+                                                        borderRadius: 'var(--radius-full)',
+                                                        background: 'var(--color-success-bg)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: 'var(--color-success)',
+                                                        fontSize: '0.9rem'
+                                                    }}>
+                                                        ✓
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ fontWeight: '500', fontSize: '0.9rem' }}>{user.name}</div>
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{user.phone}</div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    className="btn btn-ghost"
+                                                    style={{ padding: '0.375rem 0.75rem', fontSize: '0.75rem' }}
+                                                    onClick={() => unserveUser(user.id)}
+                                                >
+                                                    ↩ Unserve
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Waiting Queue */}
                         {queueData.users.length === 0 ? (
                             <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-muted)' }}>
                                 <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}>🎉</div>
@@ -248,7 +354,8 @@ export const ManagerDashboard = () => {
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
                                                 fontWeight: '700',
-                                                fontSize: '1.1rem'
+                                                fontSize: '1.1rem',
+                                                color: 'white'
                                             }}>
                                                 {user.position}
                                             </div>
