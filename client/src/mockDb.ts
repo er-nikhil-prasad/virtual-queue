@@ -31,5 +31,11 @@ export const db = {
             users[idx] = { ...users[idx], ...updates };
             db.setUsers(users);
         }
+    },
+
+    deleteUser: (userId: string) => {
+        const users = db.getUsers();
+        const filtered = users.filter((u: any) => u.id !== userId);
+        db.setUsers(filtered);
     }
 };

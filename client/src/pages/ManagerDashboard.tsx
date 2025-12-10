@@ -11,6 +11,7 @@ export const ManagerDashboard = () => {
     const [showServed, setShowServed] = useState(false);
     const [loading, setLoading] = useState(true);
     const [newUser, setNewUser] = useState({ name: '', phone: '' });
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         const m = db.getManager();
@@ -85,6 +86,33 @@ export const ManagerDashboard = () => {
         loadQueueDetails(targetQueueId);
     };
 
+    const deleteUser = (userId: string, userName: string) => {
+        if (!queueData) return;
+        if (!confirm(`Are you sure you want to remove "${userName}" from the queue?`)) return;
+
+        const targetQueueId = queueData.queue.id;
+
+        // Get the user's position before deleting
+        const allUsers = db.getUsers();
+        const userToDelete = allUsers.find((u: any) => u.id === userId);
+        if (!userToDelete) return;
+
+        const deletedPosition = userToDelete.position;
+
+        // Delete the user
+        db.deleteUser(userId);
+
+        // Update positions of users below the deleted user
+        const updatedUsers = db.getUsers();
+        updatedUsers.forEach((u: any) => {
+            if (u.queueId === targetQueueId && u.status === 'waiting' && u.position > deletedPosition) {
+                db.updateUser(u.id, { position: u.position - 1 });
+            }
+        });
+
+        loadQueueDetails(targetQueueId);
+    };
+
     const unserveUser = (userId: string) => {
         if (!queueData) return;
         const targetQueueId = queueData.queue.id;
@@ -102,6 +130,12 @@ export const ManagerDashboard = () => {
         db.setManager(null);
         window.location.href = '/login';
     };
+
+    // Filter users based on search query
+    const filteredUsers = queueData?.users?.filter((u: any) =>
+        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.phone.includes(searchQuery)
+    ) || [];
 
     if (!manager) return null;
 
@@ -190,7 +224,7 @@ export const ManagerDashboard = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.5rem' }}>
 
                     {/* Add User Card */}
-                    <div className="section" style={{ height: 'fit-content' }}>
+                    <div className="section" style={{ height: 'fit-content', position: 'sticky', top: '2rem' }}>
                         <div className="section-title">Add to Queue</div>
 
                         <form onSubmit={handleAddUser} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -232,6 +266,20 @@ export const ManagerDashboard = () => {
                             >
                                 ↻ Refresh
                             </button>
+                        </div>
+
+                        {/* Search Input */}
+                        <div style={{ marginBottom: '1rem' }}>
+                            <input
+                                placeholder="🔍 Search by name or phone..."
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '0.75rem 1rem',
+                                    fontSize: '0.9rem'
+                                }}
+                            />
                         </div>
 
                         {/* Served Stack - Collapsible */}
@@ -321,14 +369,23 @@ export const ManagerDashboard = () => {
                         )}
 
                         {/* Waiting Queue */}
-                        {queueData.users.length === 0 ? (
+                        {filteredUsers.length === 0 ? (
                             <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-muted)' }}>
-                                <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}>🎉</div>
-                                <p>Queue is empty! Add customers to get started.</p>
+                                {searchQuery ? (
+                                    <>
+                                        <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}>🔍</div>
+                                        <p>No customers found matching "{searchQuery}"</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}>🎉</div>
+                                        <p>Queue is empty! Add customers to get started.</p>
+                                    </>
+                                )}
                             </div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                {queueData.users.map((user: any, index: number) => (
+                                {filteredUsers.map((user: any, index: number) => (
                                     <div
                                         key={user.id}
                                         className="card"
@@ -337,7 +394,7 @@ export const ManagerDashboard = () => {
                                             justifyContent: 'space-between',
                                             alignItems: 'center',
                                             padding: '1rem 1.25rem',
-                                            background: index === 0
+                                            background: index === 0 && !searchQuery
                                                 ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 182, 212, 0.1) 100%)'
                                                 : 'var(--color-surface)'
                                         }}
@@ -347,7 +404,7 @@ export const ManagerDashboard = () => {
                                                 width: '40px',
                                                 height: '40px',
                                                 borderRadius: 'var(--radius-full)',
-                                                background: index === 0
+                                                background: index === 0 && !searchQuery
                                                     ? 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)'
                                                     : 'var(--color-primary-gradient)',
                                                 display: 'flex',
@@ -363,7 +420,7 @@ export const ManagerDashboard = () => {
                                                 <div style={{ fontWeight: '600', marginBottom: '0.125rem' }}>{user.name}</div>
                                                 <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{user.phone}</div>
                                             </div>
-                                            {index === 0 && (
+                                            {index === 0 && !searchQuery && (
                                                 <span className="badge badge-success" style={{ marginLeft: '0.5rem' }}>
                                                     Now Serving
                                                 </span>
@@ -371,6 +428,14 @@ export const ManagerDashboard = () => {
                                         </div>
 
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <button
+                                                className="btn btn-danger"
+                                                style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem' }}
+                                                onClick={() => deleteUser(user.id, user.name)}
+                                                title="Remove from queue"
+                                            >
+                                                ✕
+                                            </button>
                                             <button
                                                 className="btn btn-warning"
                                                 style={{ padding: '0.5rem 0.875rem', fontSize: '0.8rem' }}
